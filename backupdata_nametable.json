@@ -1,1 +1,0 @@
-{"nameTable":"nametable","primarykey":"userId","properties":{"userId":"String","username":"String","name":"String","lastname":"String","age":"Number"},"data":{},"indexes":{}}
