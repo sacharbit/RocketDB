@@ -12,13 +12,12 @@ var fs = require('fs');
 Database.prototype.splitSize = 1000000;
 Database.prototype.size = function() {return fs.statSync("backupdata.json").size;}
 
-// TODO: Being able to import/export SQL, csv, etc...
+// TODO: Being able to import/export SQL, etc...
 // TODO: Add a way to store object and possibility to call them in the database with objs.nameofobject instead of storing the whole thing multiple times.
 // TODO: Foreign Keys : New argument in the insert table query and add a foreign key arg in the database table. Each time someone wants to add a value in there, check if it's possible.
 // TODO: Store the database in multiple files so it performs better with millions of lines of data.
-// TODO: If a table is too memory-heavy for the RAM, split it in the files and in the RAM so that if 2 requests happen at the same time, you load it once for 2 queries.
+// If a table is too memory-heavy for the RAM, split it in the files and in the RAM so that if 2 requests happen at the same time, you load it once for 2 queries.
 // TODO: Sync the shared data with the client.
-// TODO: Implement the indexes in the search function to make it quicker.
 // TODO: Also, sortBy in search function
 
 const DATA_TYPES = ['String', 'Number', 'Date', 'Boolean', 'List', 'Object', 'f_key'];
@@ -35,11 +34,13 @@ Database.prototype.createIndex = function(tablename, key){
   try{
     if(this.data[tablename] === undefined) throw tablename + "is not a table in this database.";
     if(this.data[tablename].properties[key] === undefined) throw key + " is not a property of "+tablename;
+    var props = Object.keys(this.data[tablename].properties), index_key = props.indexOf(key);
+    if(['Boolean', 'List', 'Object', 'f_key'].indexOf(this.data[tablename].properties[key]) != -1) throw "The key can't be a Boolean, a list, an object or a foreign key.";
     this.data[tablename].indexes[key] = {};
     var data = this.data[tablename].data;
     for(i in data){
-      if(this.data[tablename].indexes[key][data[i][key]] === undefined) this.data[tablename].indexes[key][data[i][key]] = new Array(i);
-      else this.data[tablename].indexes[key][data[i][key]].push(i);
+      if(this.data[tablename].indexes[key][data[i][index_key]] === undefined) this.data[tablename].indexes[key][data[i][index_key]] = new Array(i);
+      else this.data[tablename].indexes[key][data[i][index_key]].push(i);
     }
     return {status:'success', response : 'Index added'};
   }
@@ -190,7 +191,7 @@ Database.prototype.operationsInDatabase = function(table, keys, conditions, oper
   }
   return result;
 }
-Database.prototype.search = function(table, keys, conditions, usingIndexValues){
+Database.prototype.search = function(table, keys, conditions){
   try{
     if(this.data[table] === undefined) throw table+" doesn't exist in the database.";
     var result = [], cond_str = "";
@@ -224,6 +225,39 @@ Database.prototype.search = function(table, keys, conditions, usingIndexValues){
     return {status : "success", response : result};
   }
   catch(err){var error = new Error(err); return {response : err, status : "failed"};}
+}
+Database.prototype.indexedSearch = function(tablename, index, keys, conditions){
+  try{
+    if(this.data[tablename] === undefined) throw tablename + " does not exist in the database.";
+    if(this.data[tablename].indexes[index] === undefined) throw index + " is not an index in the table "+tablename;
+    var result = [], indexes = Object.keys(this.data[tablename].indexes[index]), result_tmp = [];
+    var funct_str = "var "+index+"=value;", cond_str = "";
+    if(keys != null){
+      for(i in keys){
+        var list_keys = this.data[tablename].indexes[index][keys[i]];
+        for(k in list_keys) result.push(this.data[tablename].data[list_keys[k]]);
+      }
+      return {status : 'success', response : result};
+    }
+    else if(typeof(conditions) === 'string') cond_str = conditions;
+    else if(typeof(conditions) === 'object'){
+      cond_str = conditions[0];
+      var i=1;
+      while(i<conditions.length) cond_str +=" && "+conditions[i];
+    }
+    else throw "You didn't put conditions nor values to check.";
+
+    funct_str +="return ("+cond_str+");";
+    var funct = new Function("value", funct_str);
+    for(i in indexes){
+      if(funct(indexes[i])) result_tmp.push(this.data[tablename].indexes[index][indexes[i]]);
+    }
+    for(i in result_tmp){
+      for(j in result_tmp[i]) result.push(this.data[tablename].data[result_tmp[i][j]]);
+    }
+    return result;
+  }
+  catch(err){return {response : err, status : 'failed'};}
 }
 
 Database.prototype.addObject = function(keyObject, obj, allow_updates){

@@ -5,7 +5,7 @@ var db = require('rocketdb')(<options>);
 
 - **Insert a table :** insertTable(\<table name\>, \<primary key\>, \<list attributes\>)
 
-**Example :**
+Example :
 ```javascript
 db.insertTable("users", "userId", {"userId" : "String", "username" : "String", "name" : "String", "lastname" : "String"})
 ```
@@ -14,12 +14,12 @@ Types of variable are : String, Number, Date, Boolean, List, Object
 
 - **Insert a line :** db.insertLine(\<table name\>, \<values\>, \<allow updates [*optional*]\>)
 
-**Example :**
+Example :
 ```javascript
 db.insertLine("nametable", {userId : '02938', username : 'sacharbit', name : 'Sacha', lastname : 'Charbit'})
 ```
 
-**Example where we allow updates :**
+Example where we allow updates :
 ```javascript
 db.insertLine("nametable", {userId : '02938', username : 'sacharbit', name : 'Sacha', lastname : 'Charbit'}, true)
 ```
@@ -43,20 +43,26 @@ var csv_handler = require('csv-handler');
 var db = require('rocketdb')({importCSV : csv_handler.importCSV, exportCSV : csv_handler.exportCSV});
 ```
 
-- **Search in the database :**  db.search(\<nametable\>, \<keys\>, \<conditions\>, \<usingIndexValues\>); *returns* {status:\<'success'/'failed'\>, response : \<array of rows\>}
-**Example with no condition but with a key :**
+- **Search in the database :**  db.search(\<nametable\>, \<values\>, \<conditions\>); *returns* {status:\<'success'/'failed'\>, response : \<array of rows\>}
+Example with no condition but with a key :
 ```javascript
 db.search("tablename", ["02938"]);
 ```
 
-**Example with condition and using an index value 'username':**
+Example with condition :
 ```javascript
-db.search("users", null, ["username == 'sacharbit'"], true);
+db.search("users", null, ["username == 'sacharbit'"]);
+```
+
+- **Search with an index in the database :** db.indexedSearch(\<nametable\>, \<index\>, \<values\>, \<conditions\>)
+Example :
+```javascript
+db.indexedSearch("player", "height", null, ["height == 180"])
 ```
 
 - **Sum :** db.sum(\<table name\>, \<keys\>, \<conditions\>, \<key to check for sum\>) *returns* {status:\<'success'/'failed'\>, response : \<sum of elements\>}
 
-**Example :**
+Example :
 ```javascript
 db.sum("users", null, ["username == 'sacharbit'"], 'age')
 db.count("users", null, ["username == 'sacharbit'"])
@@ -68,6 +74,7 @@ db.mean("users", null, ["username == 'sacharbit'"], 'age')
 ```
 
 - **Count :** db.count(\<table name\>, \<keys\>, \<conditions\>) *returns* {status:\<'success'/'failed'\>, response : \<count of elements\>}
+Example :
 ```javascript
 db.count("users", null, ["username == 'sacharbit'"])
 ```

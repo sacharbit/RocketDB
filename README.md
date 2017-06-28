@@ -1,5 +1,5 @@
 # RocketDB
-RocketDB is a simple and dependency-free NPM module for easy storage and querying of your data.
+RocketDB is a simple and dependency-free NPM module for easy storage and querying of your data. If you have a small database for a simple nodejs app, this is the module for your needs. Much faster than the competition, it does all the basic things you need to get started.
 
 ## Why using RocketDB ?
 It's much faster than the competition.
@@ -25,6 +25,7 @@ We used the data from [here](https://www.kaggle.com/drgilermo/nba-players-stats)
 - **Import data from csv file**
 - **Export data in csv file**
 - **Search in the database**
+- **Search with an index in the database**
 - **Sum**
 - **Mean**
 - **Count**

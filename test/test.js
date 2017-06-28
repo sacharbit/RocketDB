@@ -4,15 +4,14 @@
   linkedin : https://www.linkedin.com/in/sacha-charbit-004502b9/
 */
 var csv_handler = require('csv-handler');
-console.log(csv_handler);
 var db = require('../src/RocketDB')({importCSV : csv_handler.importCSV, exportCSV : csv_handler.exportCSV, splitSize : 100000});
 var colors = require('colors');
 var fs = require('fs');
 
 var check = function(returned, nameTest, checkResponse){
-  if(returned.status == "success" && typeof(wantedresult) == 'undefined')
+  if(checkResponse !== undefined && returned.response == checkResponse)
     console.log((nameTest +" : " + returned.response).green);
-  else if(checkResponse !== undefined && returned.response == checkResponse)
+  else if(returned.status == "success")
     console.log((nameTest +" : " + returned.response).green);
   else console.log((nameTest +" : " + returned.response).red);
 }
@@ -58,4 +57,8 @@ db.importCSV("player", "test/Players.csv", function(){
   checkValue(db.count("player", null, [true], "id"), "Number of players in the database", 3922);
   db.backupData();
   db.exportCSV('player');
+  db.indexedSearch("player", "height", null, ["height == 180"]);
 });
+
+db.insertTable("testforlist", "id", {id:"String", List : "List"});
+check(db.createIndex("testforlist", "List"), "Create an index with a list", "The key can't be a Boolean, a list, an object or a foreign key.")
