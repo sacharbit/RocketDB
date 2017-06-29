@@ -22,22 +22,18 @@ Database.prototype.size = function() {return fs.statSync("backupdata.json").size
 
 const DATA_TYPES = ['String', 'Number', 'Date', 'Boolean', 'List', 'Object', 'f_key'];
 
-String.prototype.replaceAll = function(search, replacement) {
-  var target = this;
-  return target.replace(new RegExp(search, 'g'), replacement);
-};
-String.prototype.splice = function(idx, rem, str) {
-    return this.slice(0, idx) + str + this.slice(idx + Math.abs(rem));
-};
-
 Database.prototype.createIndex = function(tablename, key){
   try{
+    // Check if the table and the key exists
     if(this.data[tablename] === undefined) throw tablename + "is not a table in this database.";
     if(this.data[tablename].properties[key] === undefined) throw key + " is not a property of "+tablename;
+    // Get the list of properties from the table and the index of the key in parameters
     var props = Object.keys(this.data[tablename].properties), index_key = props.indexOf(key);
+    // Forbid some data types to be indexes
     if(['Boolean', 'List', 'Object', 'f_key'].indexOf(this.data[tablename].properties[key]) != -1) throw "The key can't be a Boolean, a list, an object or a foreign key.";
     this.data[tablename].indexes[key] = {};
     var data = this.data[tablename].data;
+    // for each element in data, check the key value and add the index in the list of indexes for this key value
     for(i in data){
       if(this.data[tablename].indexes[key][data[i][index_key]] === undefined) this.data[tablename].indexes[key][data[i][index_key]] = new Array(i);
       else this.data[tablename].indexes[key][data[i][index_key]].push(i);
@@ -49,10 +45,19 @@ Database.prototype.createIndex = function(tablename, key){
 Database.prototype.insertLine = function(nameTable, line, allow_updates){
   try{
     var line_to_send = [];
+    // If allow_updates wasn't specified, set allow_updates to false
     if(allow_updates === undefined) var allow_updates = false;
+    // Check if the table exists
     if(this.data[nameTable] === undefined) throw nameTable + "is not a table in this database.";
+    // get the primary key
+    var primarykey = line[this.data[nameTable].primarykey];
+    // if the user doesn't want to update his data, forbid the update if the primary key already exists in the database
+    if(this.data[nameTable].data[primarykey] !== undefined && !allow_updates) throw primarykey + " is already in the database. Add 'with allow_updates' to the query to update it anyway.";
+
     for(col in this.data[nameTable].properties){
+      // check if the column name exists
       if(line[col] === undefined) throw col + " has not been found in the database.";
+      // format the data depending of his type
       switch(this.data[nameTable].properties[col]){
         case 'Number' : line_to_send.push(parseFloat(line[col])); break;
         case 'Object' : line_to_send.push({obj : JSON.parse(line[col])}); break;
@@ -61,8 +66,7 @@ Database.prototype.insertLine = function(nameTable, line, allow_updates){
         default : line_to_send.push(line[col]); break;
       }
     }
-    var primarykey = line[this.data[nameTable].primarykey];
-    if(this.data[nameTable].data[primarykey] !== undefined && !allow_updates) throw primarykey + " is already in the database. Add 'with allow_updates' to the query to update it anyway.";
+    // if no exception has been thrown, add the line in the database
     this.data[nameTable].data[primarykey] = line_to_send;
     return {status : "success", response : "Line added", nameTable : nameTable, line : line};
   }
@@ -71,52 +75,58 @@ Database.prototype.insertLine = function(nameTable, line, allow_updates){
 
 Database.prototype.insertTable = function(nameTable, primarykey, properties){
   try{
+    // Check if the table already exists
     if(this.data[nameTable] !== undefined) throw nameTable + " already exists in the database.";
     for(i in properties){
+      // Check if the properties are undefined or the object is an array.
       if(properties[i] === 'undefined') throw "You didn't give a type to " + i;
+      // Check if the property has special characters
       if(/[~`!#$%\^&*+=\-\[\]\\';,/{}|\\":<>\?]/g.test(i)) throw "You can't put special characters in the property name. "+i;
+      // Check if the property type is listed in DATA_TYPES
       if(DATA_TYPES.indexOf(properties[i]) == -1) throw (properties[i] + " for " + i, " is not an acceptable data type. Choose between : " + DATA_TYPES);
     }
+    // If no exception has been thrown :
     this.data[nameTable] = {nameTable : nameTable, primarykey : primarykey, properties : properties, data : {}, indexes : {}};
     return({response : "Table added", nameTable : nameTable, status:"success"});
   }
   catch(err){var error = new Error(err); console.log(error.stack); return {status:"failed", response : error}; }
 }
 
-// Put all the data on file
-Database.prototype.backupData = function(nameFile){
-  if(nameFile === undefined) var nameFile = "backupdata";
-  var tables = [];
-  for(i in this.data){
-    fs.writeFileSync(nameFile+"_"+i+".json", JSON.stringify(this.data[i]));
-    tables.push(i);
+// Backup Data in multiple files :
+// 1 file for all the infos about the database.
+// 1 file for each table in the database with data, objects, indexes...
+Database.prototype.backupData = function(nameTable){
+  try{
+    if(nameTable !== undefined && this.data[nameTable] === undefined) throw nameTable + "is not a table in this database.";
+    var nameFile = "backupdata";
+    var tables = [];
+    if(nameTable !== undefined){ // if table specified, backup only the table
+      fs.writeFileSync(nameFile+"_"+nameTable+".json", JSON.stringify(this.data[nameTable]));
+    }
+    else{ // nackup everything
+      for(i in this.data){ // each table in a separated file for shorter loading time
+        fs.writeFileSync(nameFile+"_"+i+".json", JSON.stringify(this.data[i]));
+        tables.push(i);
+      } // add a list of the table names in the principal file
+      fs.writeFileSync(nameFile+".json", JSON.stringify({tables : tables, objects : this.objects}));
+    }
+    return {response : "Data backup at "+ new Date(), status : "success"};
   }
-  fs.writeFileSync(nameFile+".json", JSON.stringify({tables : tables, objects : this.objects}));
-  return {response : "Data backup at "+ new Date(), status : "success"};
-}
-
-Database.prototype.splitDatabase = function(){
-  if(this.size() > this.splitSize){
-
-  }
-}
-
-Database.prototype.rawBackup = function(filepath){
-  if(filepath === undefined) var filepath = "backup";
-  fs.writeFileSync(filepath+".json", JSON.stringify(this));
+  catch(err){return {status:'failed', response : err}; }
 }
 
 Database.prototype.loadData = function(nameTable){
   try{
+      if(nameTable !== undefined && this.data[nameTable] === undefined) throw nameTable + "is not a table in this database.";
     fs.readFileSync("backupdata.json", "utf8", function(err, result){
-      if(err == null){
+      if(err == null){ // Add the objects
         this.objects = result.objects;
-        if(nameTable === undefined){
-          for(i in result.tables){
+        if(nameTable === undefined){ // if no tables specified in the parameters
+          for(i in result.tables){ // for each table names in the database, store it in the RAM
             var table = result.tables[i];
             fs.readFileSync("backupdata_"+table+".json", "utf8", function(err, result){if(err == null) this.data[table] = result;})}
         }
-        else{
+        else{ // if a table has been specified, store this table in the RAM
           fs.readFileSync("backupdata_"+nameTable+".json", "utf8", function(err, result){if(err == null) this.data[nameTable] = result;})
         }
       }
@@ -126,21 +136,25 @@ Database.prototype.loadData = function(nameTable){
   catch(err){var error = new Error(err);}
 }
 
-Database.prototype.dump = function(nametable, lines){
+Database.prototype.dump = function(nametable, lines, allow_updates){
   var all_success = true, returned = {count_failed : 0, status : 'success', response : []};
+  // for each line, call insertLine and if status is 'failed', add 1 to the count_failed and add the resposne to the response array
   for(i in lines){
-    var response = this.insertLine(nametable, lines[i]);
+    var response = this.insertLine(nametable, lines[i], allow_updates);
     all_success = all_success && (response.status == 'success');
     if(response.status == 'failed'){
-      returned.status = 'failed'; returned.count_failed++;
+      returned.status = 'failed'; returned.count_failed++; response.push(returned.response);
       return returned;
     }
   }
-  this.backupData();
+  // then, backup the data for the table
+  this.backupData(nametable);
   return returned;
 }
 Database.prototype.getSplitSize = function(){return Database.prototype.splitSize;}
 
+
+// DEPRECATED FUNCTION : DO NOT USE !
 Database.prototype.query = function(action, args){
   console.log("This action is deprecated. Please read the documentation to know what function you should use instead.");
   switch(action){
@@ -157,34 +171,42 @@ Database.prototype.query = function(action, args){
   }
 }
 
-Database.prototype.sum = function(a, b, c, d){
+Database.prototype.sum = function(a, b, c, d){ // Alias for operationsInDatabase with 'sum' in parameters
   return this.operationsInDatabase(a, b, c, d, 'sum');
 }
-Database.prototype.mean = function(a, b, c, d){
+Database.prototype.mean = function(a, b, c, d){ // Alias for operationsInDatabase with 'mean' in parameters
   return this.operationsInDatabase(a, b, c, d, 'mean');
 }
-Database.prototype.count = function(a, b, c, d){
+Database.prototype.count = function(a, b, c, d){ // Alias for operationsInDatabase with 'count' in parameters
   return this.operationsInDatabase(a, b, c, d, 'count');
 }
 
-Database.prototype.get = function(table, key){
+Database.prototype.get = function(table, key){ // get one line if you give the tablename and the key value
   try{
+    if(this.data[nameTable] === undefined) throw nameTable + "is not a table in this database.";
     if(typeof key !== 'string') throw 'Key must be a string.';
     return this.data[table].data[key];
   }
   catch(err){var error = new Error(err); return {status:'failed', response : error.stack};}
 }
-
+// Function to remove a line
 Database.prototype.removeLine = function(table, key){delete this.data[table].data[key]; return {status:'success', response : 'Deleted line'};}
+// Function to remove a table
 Database.prototype.removeTable = function(table){delete this.data[table]; return {status : 'success', response : 'Deleted table'};}
+// Alias for removeLine
 Database.prototype.deleteLine = function(table, key){return this.removeLine(table, key);}
+// Alias for removeTable
 Database.prototype.deleteTable = function(table){return this.removeTable(table);}
 
+// Search in the database with the search function and do operations in a certain key
 Database.prototype.operationsInDatabase = function(table, keys, conditions, operation_key, operation){
+  // Get the result of the search
   var lines = this.search(table, keys, conditions).response, result = 0;
+  // Get all the keys in the database properties and get the index of the operation_key in the parameters to get to this specific value
   var keys = Object.keys(this.data[table].properties),
   ind = keys.indexOf(operation_key);
   switch(operation){
+    // Dépending on the operation, do a specifig task to the operation_key values
     case 'sum' : for(i in lines) result +=lines[i][ind]; break;
     case 'count' : result = lines.length; break;
     case 'mean' : for(i in lines) result +=lines[i][ind]; result /= lines.length; break;
@@ -193,41 +215,46 @@ Database.prototype.operationsInDatabase = function(table, keys, conditions, oper
 }
 Database.prototype.search = function(table, keys, conditions){
   try{
+    // check if the table exists
     if(this.data[table] === undefined) throw table+" doesn't exist in the database.";
     var result = [], cond_str = "";
+    // if no condition provided, but provided keys instead, add in the result those keys
     if(conditions === undefined && typeof(keys) == 'object') for(i in keys) result.push(this.data[table].data[keys[i]]);
     else if(typeof(keys) == 'string') result.push(this.data[table].data[keys]);
-    else{
-      var funct_str = "";
-      var i=0;
+    else if(conditions !== undefined) { // if conditions were provided, generate a function to check the confitions and use it
+      var funct_str = "", i=0; // initialize the string for the function
+      // For each property, add a declaration in the function
       for(prop in this.data[table].properties){ funct_str += "var "+prop+" = data["+i+"]; "; i++;}
-      if(typeof(conditions) !== 'object') cond_str = conditions;
+      // for each condition, add it to the conditions string
+      if(typeof(conditions) === 'string') cond_str = conditions;
       else{
         cond_str = conditions[0];
         var i=1;
         while(i<conditions.length){cond_str += " && "+conditions[i]; i++;}
       }
+      // wrap the function string and create the function with the new Function()
       funct_str += "if("+cond_str+") return data;";
       var funct_get = new Function("data", funct_str);
-      if(keys != null){
+      if(keys != null){ // If keys were provided, go through all those keys
         for(i in keys){
           var res_tmp = funct_get(this.data[table].data[keys[i]]);
           if(res_tmp !== undefined) result.push(res_tmp);
         }
       }
-      else{
+      else{ // If no key were provided, go through all the table data
         for(key in this.data[table].data){
           var res_tmp = funct_get(this.data[table].data[key]);
           if(res_tmp !== undefined) result.push(res_tmp);
         }
       }
     }
+    else throw "No keys or conditions were provided or were not well formated.";
     return {status : "success", response : result};
   }
   catch(err){var error = new Error(err); return {response : err, status : "failed"};}
 }
 Database.prototype.indexedSearch = function(tablename, index, keys, conditions){
-  try{
+  try{ // Very similar to search function
     if(this.data[tablename] === undefined) throw tablename + " does not exist in the database.";
     if(this.data[tablename].indexes[index] === undefined) throw index + " is not an index in the table "+tablename;
     var result = [], indexes = Object.keys(this.data[tablename].indexes[index]), result_tmp = [];
@@ -260,6 +287,7 @@ Database.prototype.indexedSearch = function(tablename, index, keys, conditions){
   catch(err){return {response : err, status : 'failed'};}
 }
 
+// Adds an object in the database. There is no use for it yet but will have one in the near future
 Database.prototype.addObject = function(keyObject, obj, allow_updates){
   try{
     if(this.objects[keyObject] === undefined && (allow_updates === undefined || !allow_updates))

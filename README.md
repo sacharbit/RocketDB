@@ -36,12 +36,13 @@ We used the data from [here](https://www.kaggle.com/drgilermo/nba-players-stats)
 ## Documentation
 You can find the documentation of this npm module [here](https://github.com/sacharbit/RocketDB/blob/master/DOCUMENTATION.md).
 
-## Features to add
+## Features in the future
 - Being able to import SQL, etc...
 - Being able to split the database in multiple 10MB files for quicker search.
 - groupBy query
 - Sync the server's data with the client's data (only sdata).
 - Graphical interface to handle and show the data to the admin.
+- Regular expression in search function
 
 ## How to contribute ?
 - You have an issue? Report it in the issue section.
