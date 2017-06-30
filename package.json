@@ -2,7 +2,7 @@
   "name": "rocketdb",
   "version": "0.6.0",
   "description": "Very simple and very fast database npm module.",
-  "main": "src/RocketDB.js",
+  "main": "dist/RocketDB.js",
   "dependencies": {
     "csv-handler": "^1.2.0",
     "fast-csv": "^2.4.0"
@@ -13,7 +13,7 @@
   },
   "scripts": {
     "start": "nodejs test/test.js; nodejs src/RocketDB.js",
-    "test": "nodejs test/test.js"
+    "test": "uglifyjs src/RocketDB.js -o dist/RocketDB.js; nodejs test/test.js"
   },
   "repository": {
     "type": "git",

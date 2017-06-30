@@ -3,13 +3,14 @@
   Github : @sacharbit
   linkedin : https://www.linkedin.com/in/sacha-charbit-004502b9/
 */
+var DATA_TYPES = ['String', 'Number', 'Date', 'Boolean', 'List', 'Object', 'f_key'];
+
 var Database = function(){
   this.data = {};
   this.objects = {};
   this.splitSize = Database.prototype.splitSize;
 }
 var fs = require('fs');
-Database.prototype.splitSize = 1000000;
 Database.prototype.size = function() {return fs.statSync("backupdata.json").size;}
 
 // TODO: Being able to import/export SQL, etc...
@@ -20,8 +21,6 @@ Database.prototype.size = function() {return fs.statSync("backupdata.json").size
 // TODO: Sync the shared data with the client.
 // TODO: Also, sortBy in search function
 // TODO: update keys when the table is updated
-
-const DATA_TYPES = ['String', 'Number', 'Date', 'Boolean', 'List', 'Object', 'f_key'];
 
 Database.prototype.updateIndexes = function(tablename){
   var index_keys = Object.keys(this.data[tablename].indexes);

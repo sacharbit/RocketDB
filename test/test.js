@@ -4,7 +4,7 @@
   linkedin : https://www.linkedin.com/in/sacha-charbit-004502b9/
 */
 var csv_handler = require('csv-handler');
-var db = require('../src/RocketDB')({importCSV : csv_handler.importCSV, exportCSV : csv_handler.exportCSV, splitSize : 100000});
+var db = require('../dist/RocketDB')({importCSV : csv_handler.importCSV, exportCSV : csv_handler.exportCSV, splitSize : 100000});
 var colors = require('colors');
 var fs = require('fs');
 
