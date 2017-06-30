@@ -29,7 +29,7 @@ check(db.insertLine("nametable", {userId : 'oko', username : 'igjhgg', name : 'h
 
 check(db.insertLine("nametable", {userId : 'oko', username : 'actualbeautifulusername', name : 'actualbeautifulname', lastname : 'actualbeautifullastname', age:21}),
       "Inserting a line in a table with already existing key",
-      "Error: oko is already in the database. Add 'with allow_updates' to the query to update it anyway.");
+      "oko is already in the database. Change allow_updates to true in the parameters to change it anyway.");
 
 check(db.insertLine("nametable",
       {userId : 'oko', username : 'actualbeautifulusername', name : 'actualbeautifulname', lastname : 'actualbeautifullastname', age:21}, true),
@@ -47,7 +47,6 @@ check(db.deleteLine("nametable", "oko"), "Deleting a line");
 checkValue(db.getSplitSize(), "Get split size", 100000);
 db.backupData();
 db.loadData();
-db.insertLine("")
 check(db.insertTable("player", "id", {id: 'Number', Player : 'String', height :'Number', weight : 'Number', collage : 'String', born : 'Number', birth_city : 'String', birth_state : 'String'}), "Insert the table player");
 db.importCSV("player", "test/Players.csv", function(){
   db.backupData();
@@ -57,7 +56,10 @@ db.importCSV("player", "test/Players.csv", function(){
   checkValue(db.count("player", null, [true], "id"), "Number of players in the database", 3922);
   db.backupData();
   db.exportCSV('player');
+  check(db.insertLine("player",
+    {id:978675, Player:"Pierre le drian", height:13, weight : 14, collage : "sddd", born : 142, birth_city : "Paris", birth_state : "France"}), "Add a line in the player table");
   db.indexedSearch("player", "height", null, ["height == 180"]);
+  checkValue(db.indexedSearch("player", "height", null, ["height == 13"]), "Check if insertLine has updated the indexes", "978675,Pierre le drian,13,14,sddd,142,Paris,France");
 });
 
 db.insertTable("testforlist", "id", {id:"String", List : "List"});

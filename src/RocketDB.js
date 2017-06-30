@@ -19,8 +19,17 @@ Database.prototype.size = function() {return fs.statSync("backupdata.json").size
 // If a table is too memory-heavy for the RAM, split it in the files and in the RAM so that if 2 requests happen at the same time, you load it once for 2 queries.
 // TODO: Sync the shared data with the client.
 // TODO: Also, sortBy in search function
+// TODO: update keys when the table is updated
 
 const DATA_TYPES = ['String', 'Number', 'Date', 'Boolean', 'List', 'Object', 'f_key'];
+
+Database.prototype.updateIndexes = function(tablename){
+  var index_keys = Object.keys(this.data[tablename].indexes);
+  for(i in index_keys){
+    this.createIndex(tablename, index_keys[i]);
+  }
+
+}
 
 Database.prototype.createIndex = function(tablename, key){
   try{
@@ -42,7 +51,7 @@ Database.prototype.createIndex = function(tablename, key){
   }
   catch(err){return {status: 'failed', response : err}};
 }
-Database.prototype.insertLine = function(nameTable, line, allow_updates){
+Database.prototype.insertLine = function(nameTable, line, allow_updates, dump){
   try{
     var line_to_send = [];
     // If allow_updates wasn't specified, set allow_updates to false
@@ -52,7 +61,7 @@ Database.prototype.insertLine = function(nameTable, line, allow_updates){
     // get the primary key
     var primarykey = line[this.data[nameTable].primarykey];
     // if the user doesn't want to update his data, forbid the update if the primary key already exists in the database
-    if(this.data[nameTable].data[primarykey] !== undefined && !allow_updates) throw primarykey + " is already in the database. Add 'with allow_updates' to the query to update it anyway.";
+    if(this.data[nameTable].data[primarykey] !== undefined && !allow_updates) throw primarykey + " is already in the database. Change allow_updates to true in the parameters to change it anyway.";
 
     for(col in this.data[nameTable].properties){
       // check if the column name exists
@@ -68,9 +77,10 @@ Database.prototype.insertLine = function(nameTable, line, allow_updates){
     }
     // if no exception has been thrown, add the line in the database
     this.data[nameTable].data[primarykey] = line_to_send;
+    if(dump === undefined){ this.backupData(nameTable); this.updateIndexes(nameTable); }
     return {status : "success", response : "Line added", nameTable : nameTable, line : line};
   }
-  catch(err){var error = new Error(err); return {status :"failed", response : error}; }
+  catch(err){var error = new Error(err); return {status :"failed", response : err}; }
 }
 
 Database.prototype.insertTable = function(nameTable, primarykey, properties){
@@ -140,7 +150,7 @@ Database.prototype.dump = function(nametable, lines, allow_updates){
   var all_success = true, returned = {count_failed : 0, status : 'success', response : []};
   // for each line, call insertLine and if status is 'failed', add 1 to the count_failed and add the resposne to the response array
   for(i in lines){
-    var response = this.insertLine(nametable, lines[i], allow_updates);
+    var response = this.insertLine(nametable, lines[i], allow_updates, 1);
     all_success = all_success && (response.status == 'success');
     if(response.status == 'failed'){
       returned.status = 'failed'; returned.count_failed++; response.push(returned.response);
@@ -187,7 +197,7 @@ Database.prototype.get = function(table, key){ // get one line if you give the t
     if(typeof key !== 'string') throw 'Key must be a string.';
     return this.data[table].data[key];
   }
-  catch(err){var error = new Error(err); return {status:'failed', response : error.stack};}
+  catch(err){var error = new Error(err); return {status:'failed', response : err};}
 }
 // Function to remove a line
 Database.prototype.removeLine = function(table, key){delete this.data[table].data[key]; return {status:'success', response : 'Deleted line'};}
@@ -294,7 +304,7 @@ Database.prototype.addObject = function(keyObject, obj, allow_updates){
     throw "This object already exists. Add set allow_updates to true to update it.";
     else this.objects[keyObject] = obj;
   }
-  catch(err){var error = new Error();return {status: 'failed', response : error.stack};}
+  catch(err){var error = new Error();return {status: 'failed', response : err};}
 }
 
 module.exports = function(obj){
