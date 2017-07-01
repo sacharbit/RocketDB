@@ -310,5 +310,6 @@ module.exports = function(obj){
   if(obj.importCSV !== undefined) Database.prototype.importCSV = obj.importCSV;
   if(obj.exportCSV !== undefined) Database.prototype.exportCSV = obj.exportCSV;
   if(obj.splitSize !== undefined) Database.prototype.splitSize = obj.splitSize;
+  var user_handler = require('../src/user_handler');
   return new Database();
 }

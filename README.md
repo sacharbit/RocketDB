@@ -43,6 +43,7 @@ You can find the documentation of this npm module [here](https://github.com/sach
 - Sync the server's data with the client's data (only sdata).
 - Graphical interface to handle and show the data to the admin.
 - Regular expression in search function
+- Creating already formated tables and functions for many uses such as blogging, users, messages etc...
 
 ## How to contribute ?
 - You have an issue? Report it in the issue section.
