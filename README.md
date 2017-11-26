@@ -1,3 +1,5 @@
+**Warning: This repository is no longer active. If you want to use it or contribute to it, just take it, keep the license open and credit me for the code that I've made.**
+
 # RocketDB
 RocketDB is a simple and dependency-free NPM module for easy storage and querying of your data. If you have a small database for a simple nodejs app, this is the module for your needs. Much faster than the competition, it does all the basic things you need to get started.
 
